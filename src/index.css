@@ -1023,3 +1023,547 @@ body {
   color: var(--accent-blue);
   transform: translateY(-1px);
 }
+
+/* --- Locking & Spreading UI --- */
+.row-lock-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate-400);
+  transition: all 0.2s;
+  border-radius: 4px;
+  margin-left: auto;
+}
+
+.row-lock-btn:hover {
+  background: #f1f5f9;
+  color: var(--accent-blue);
+}
+
+.row-lock-btn.is-locked {
+  color: var(--accent-blue);
+}
+
+.cell-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.cell-lock-btn {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--slate-400);
+  opacity: 0;
+  transition: all 0.2s;
+  z-index: 2;
+  border-radius: 2px;
+}
+
+.cell-input-wrapper:hover .cell-lock-btn {
+  opacity: 0.5;
+}
+
+.cell-lock-btn:hover {
+  opacity: 1 !important;
+  color: var(--accent-blue);
+  background: white;
+}
+
+.cell-lock-btn.is-locked {
+  opacity: 1;
+  color: var(--accent-blue);
+}
+
+.cell-locked {
+  background-color: #f8fafc !important;
+}
+
+.cell-locked .sheet-cell-input {
+  color: var(--slate-400);
+  cursor: not-allowed;
+}
+
+.cell-locked .cell-lock-btn {
+  opacity: 1;
+}
+
+.month-header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.column-lock-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--slate-400);
+  opacity: 0.3;
+  transition: all 0.2s;
+  border-radius: 4px;
+}
+
+.column-lock-btn:hover {
+  opacity: 1;
+  color: var(--accent-blue);
+  background: #f1f5f9;
+}
+
+/* --- Activity Log Timeline --- */
+.log-view-container {
+  padding: 32px;
+  max-width: 900px;
+  margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.log-header-icon {
+  color: var(--accent-blue);
+}
+
+.log-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.log-count {
+  background: var(--slate-100);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 20px;
+  margin-left: auto;
+}
+
+.log-timeline {
+  position: relative;
+  padding-left: 28px;
+}
+
+.log-timeline::before {
+  content: '';
+  position: absolute;
+  left: 13px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--panel-border), transparent);
+  border-radius: 1px;
+}
+
+.log-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.log-empty p {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 16px 0 4px;
+  color: var(--slate-600);
+}
+
+.log-empty span {
+  font-size: 0.85rem;
+}
+
+.log-entry {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  padding: 0 0 20px;
+}
+
+.log-entry-timeline-dot {
+  position: absolute;
+  left: -28px;
+  top: 2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.log-entry-content {
+  flex: 1;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 14px 18px;
+  transition: box-shadow 0.2s;
+}
+
+.log-entry-content:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.log-entry-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.log-action-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.log-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.log-time-full {
+  color: var(--slate-400);
+  margin-left: 4px;
+}
+
+.log-details {
+  font-size: 0.85rem;
+  color: var(--slate-600);
+  margin: 0 0 6px;
+  line-height: 1.4;
+}
+
+.log-value-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 5px 12px;
+  margin: 4px 0;
+  font-size: 0.82rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.log-old-value {
+  color: #dc2626;
+  font-weight: 600;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.log-arrow {
+  color: var(--slate-400);
+  flex-shrink: 0;
+}
+
+.log-new-value {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.log-impacted {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.log-impacted>svg {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.log-impacted-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.log-impacted-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.log-impacted-tag {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #fef9c3;
+  color: #854d0e;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.log-impacted-tag.log-more {
+  background: var(--slate-100);
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* --- Formula Bar --- */
+.formula-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--panel-border);
+  padding: 0;
+  height: 36px;
+  font-size: 0.82rem;
+}
+
+.formula-bar-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-right: 1px solid var(--panel-border);
+  height: 100%;
+  min-width: 200px;
+  background: #f8fafc;
+}
+
+.fx-badge {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: #7c3aed;
+  background: #ede9fe;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
+.cell-ref {
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.formula-bar-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0 14px;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  height: 100%;
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.formula-bar-input.is-formula {
+  color: #7c3aed;
+}
+
+.formula-bar-input:focus {
+  background: #fefce8;
+}
+
+.formula-bar-input:disabled {
+  background: #f1f5f9;
+  color: var(--slate-400);
+}
+
+/* f(x) tag on cells */
+.cell-fx-tag {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  font-size: 0.55rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #7c3aed;
+  background: #ede9fe;
+  padding: 0px 3px;
+  border-radius: 2px;
+  line-height: 1.3;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cell-input-wrapper {
+  position: relative;
+}
+
+.cell-active {
+  outline: 2px solid var(--accent-blue) !important;
+  outline-offset: -2px;
+  background: #eff6ff !important;
+}
+
+/* --- Tree Node Monthly Values Bar --- */
+.node-monthly-bar {
+  display: flex;
+  gap: 1px;
+  padding: 4px 8px 2px;
+  background: rgba(0, 0, 0, 0.02);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+}
+
+.monthly-mini-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 28px;
+  flex: 1;
+  padding: 1px 0;
+  border-radius: 3px;
+  transition: background 0.15s;
+  cursor: default;
+}
+
+.monthly-mini-cell:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.mini-month {
+  font-size: 0.5rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.mini-val {
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: #334155;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* --- Sync Toggle Button --- */
+.sync-active {
+  background-color: #ecfdf5 !important;
+  color: #059669 !important;
+  border: 1px solid #10b981 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sync-active:hover {
+  background-color: #d1fae5 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.sync-paused {
+  background-color: #fff1f2 !important;
+  color: #e11d48 !important;
+  border: 1px solid #f87171 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sync-paused:hover {
+  background-color: #ffe4e6 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.15);
+}
+
+.spin-slow {
+  animation: spin 4s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Drag-to-Fill Handle --- */
+.fill-handle {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 8px;
+  height: 8px;
+  background: var(--accent-blue, #3b82f6);
+  border: 1px solid #fff;
+  cursor: crosshair;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  border-radius: 1px;
+}
+
+td:hover .fill-handle,
+.fill-handle:hover {
+  opacity: 1;
+}
+
+.drag-selected {
+  background: rgba(59, 130, 246, 0.08) !important;
+  outline: 1px dashed #3b82f6;
+  outline-offset: -1px;
+}
+
+/* --- Add Period Button --- */
+.add-period-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: none;
+  border: none;
+  color: var(--text-tertiary, #94a3b8);
+  cursor: pointer;
+  padding: 6px;
+  transition: all 0.15s ease;
+  border-radius: 4px;
+}
+
+.add-period-btn:hover {
+  background: var(--accent-blue, #3b82f6);
+  color: white;
+}

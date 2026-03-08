@@ -13,14 +13,18 @@ import type { Edge, Node } from 'reactflow';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import 'reactflow/dist/style.css';
-import { Plus, X, Trash2, Layers, TrendingUp } from 'lucide-react';
+import { Plus, X, Trash2, Layers, TrendingUp, RefreshCcw } from 'lucide-react';
 import { generateForecast, type ForecastMethod } from '../utils/forecast';
 import { initialKPIs } from '../data';
 import { calculateValues } from '../utils/calc';
+import { getMonthsInRange } from '../utils/dateRange';
 import KPINode from './KPINode';
 import MainLayout from './MainLayout';
 import SpreadsheetView from './SpreadsheetView';
-import type { KPIData, FormulaType, AppState, Scenario } from '../types';
+import LogView from './LogView';
+import ComparisonView from './ComparisonView';
+import { WelcomeScreen } from './WelcomeScreen';
+import type { KPIData, FormulaType, AppState, Scenario, LogEntry } from '../types';
 import dagre from 'dagre';
 
 const nodeTypes = {
@@ -32,12 +36,16 @@ const SimulationCanvasInner = ({
     setKpis,
     calculatedValues,
     baseValues,
+    monthLabels,
+    isSyncEnabled,
+    onSyncToggle,
     onToggleExpand,
     onSimulationChange,
     onSimulationTypeToggle,
     onAddChild,
     onSettings,
     onResetKPI,
+    onFullYearOverrideChange,
     isScenarioMode,
     onAddRoot,
     scenarios,
@@ -50,6 +58,8 @@ const SimulationCanvasInner = ({
     const { fitView } = useReactFlow();
     const [newScenarioName, setNewScenarioName] = useState('');
     const [showAddScenario, setShowAddScenario] = useState(false);
+
+    const memoizedNodeTypes = useMemo(() => nodeTypes, []);
 
     const handleAddScenario = () => {
         if (newScenarioName.trim()) {
@@ -126,8 +136,10 @@ const SimulationCanvasInner = ({
                     onAddChild,
                     onSettings,
                     onResetKPI,
+                    onFullYearOverrideChange,
                     calculatedValue: calculatedValues[kpi.id] ?? [],
                     baselineData: baseValues[kpi.id] ?? [],
+                    monthLabels,
                     isScenarioMode,
                     desiredTrend: kpi.desiredTrend
                 }
@@ -176,7 +188,7 @@ const SimulationCanvasInner = ({
 
         setNodes(newNodes);
         setEdges(newEdges);
-    }, [kpis, calculatedValues, onToggleExpand, onSimulationChange, onSimulationTypeToggle, onAddChild, onSettings, onResetKPI, isScenarioMode, setNodes, setEdges]);
+    }, [kpis, calculatedValues, monthLabels, onToggleExpand, onSimulationChange, onSimulationTypeToggle, onFullYearOverrideChange, onAddChild, onSettings, onResetKPI, isScenarioMode, setNodes, setEdges]);
 
     return (
         <div className="canvas-wrapper">
@@ -187,7 +199,7 @@ const SimulationCanvasInner = ({
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
                 onEdgesDelete={onEdgesDelete}
-                nodeTypes={nodeTypes}
+                nodeTypes={memoizedNodeTypes}
                 fitView
             >
                 <Background />
@@ -223,6 +235,15 @@ const SimulationCanvasInner = ({
                             </div>
                         )}
                     </div>
+
+                    <button
+                        className={`sync-toggle-mini ${isSyncEnabled ? 'active' : 'paused'}`}
+                        onClick={onSyncToggle}
+                        title={isSyncEnabled ? "Pause Sync" : "Enable Sync"}
+                    >
+                        <RefreshCcw size={12} className={isSyncEnabled ? 'spin-slow' : ''} />
+                        <span>{isSyncEnabled ? 'SYNC ON' : 'SYNC OFF'}</span>
+                    </button>
                 </Panel>
                 <Panel position="top-left" className="canvas-panel">
                     <button className="add-root-btn" onClick={onAddRoot}>
@@ -240,11 +261,19 @@ const SimulationCanvasInner = ({
     );
 };
 
-const SimulationCanvas = () => {
+interface SimulationCanvasProps {
+    projectId: string;
+    isSampleMode: boolean;
+    onBack: () => void;
+}
+
+const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSampleMode, onBack }) => {
     const months = useMemo(() => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], []);
 
+    const storageKey = `forecasting-app-state-v2-${projectId}`;
+
     const [appState, setAppState] = useState<AppState>(() => {
-        const saved = localStorage.getItem('forecasting-app-state-v2');
+        const saved = localStorage.getItem(storageKey);
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
@@ -256,6 +285,9 @@ const SimulationCanvas = () => {
                         endYear: parsed.selectedYear || new Date().getFullYear()
                     };
                 }
+                if (parsed.isSyncEnabled === undefined) {
+                    parsed.isSyncEnabled = true;
+                }
                 return parsed as AppState;
             } catch (e) {
                 console.warn('Failed to parse app state from local storage, falling back to default.');
@@ -263,7 +295,7 @@ const SimulationCanvas = () => {
         }
         return {
             scenarios: {
-                'base': { id: 'base', name: 'Base Scenario', kpis: initialKPIs, createdAt: new Date().toISOString() }
+                'base': { id: 'base', name: 'Base Scenario', kpis: isSampleMode ? initialKPIs : {}, createdAt: new Date().toISOString() }
             },
             activeScenarioId: 'base',
             dateRange: {
@@ -271,9 +303,32 @@ const SimulationCanvas = () => {
                 startYear: new Date().getFullYear(),
                 endMonth: 11,
                 endYear: new Date().getFullYear()
-            }
+            },
+            activityLog: [],
+            isSyncEnabled: true
         };
     });
+
+    const initialCalculatedValues = useMemo(() => {
+        const activeScenario = appState.scenarios[appState.activeScenarioId];
+        return calculateValues(activeScenario.kpis, appState.dateRange).results;
+    }, []);
+
+    const [treeCalculatedValues, setTreeCalculatedValues] = useState<Record<string, number[]>>(initialCalculatedValues);
+
+    const logActivity = useCallback((entry: Omit<LogEntry, 'id' | 'timestamp'>) => {
+        setAppState(prev => {
+            const newLog: LogEntry = {
+                id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+                timestamp: new Date().toISOString(),
+                ...entry
+            };
+            return {
+                ...prev,
+                activityLog: [newLog, ...(prev.activityLog || [])].slice(0, 100)
+            };
+        });
+    }, []);
 
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isScenarioMode] = useState(true);
@@ -282,11 +337,11 @@ const SimulationCanvas = () => {
 
     useEffect(() => {
         try {
-            localStorage.setItem('forecasting-app-state', JSON.stringify(appState));
+            localStorage.setItem(storageKey, JSON.stringify(appState));
         } catch (e) {
             console.warn('Local storage quota exceeded. The application state will not persist across reloads.');
         }
-    }, [appState]);
+    }, [appState, storageKey]);
 
     const activeScenario = appState.scenarios[appState.activeScenarioId];
     const kpis = activeScenario.kpis;
@@ -304,16 +359,36 @@ const SimulationCanvas = () => {
         }));
     }, []);
 
-    const baseValues = useMemo(() => calculateValues(appState.scenarios['base'].kpis, appState.dateRange), [appState.scenarios['base'].kpis, appState.dateRange]);
-    const calculatedValues = useMemo(() => calculateValues(kpis, appState.dateRange), [kpis, appState.dateRange]);
+    const monthLabels = useMemo(() => {
+        const monthsInRange = getMonthsInRange(
+            appState.dateRange.startMonth,
+            appState.dateRange.startYear,
+            appState.dateRange.endMonth,
+            appState.dateRange.endYear
+        );
+        return monthsInRange.map(m => m.label.split(' ')[0]); // Get 'Jan', 'Feb', etc.
+    }, [appState.dateRange]);
 
-    const onScenarioAdd = useCallback((name: string) => {
+    const baseValues = useMemo(() => calculateValues(appState.scenarios['base'].kpis, appState.dateRange).results, [appState.scenarios['base'].kpis, appState.dateRange]);
+    const calculatedValues = useMemo(() => calculateValues(kpis, appState.dateRange).results, [kpis, appState.dateRange]);
+
+    useEffect(() => {
+        if (appState.isSyncEnabled) {
+            setTreeCalculatedValues(calculatedValues);
+        }
+    }, [calculatedValues, appState.isSyncEnabled]);
+
+    const onSyncToggle = useCallback(() => {
+        setAppState(prev => ({ ...prev, isSyncEnabled: !prev.isSyncEnabled }));
+    }, []);
+
+    const onScenarioAdd = useCallback((name: string, snapshot?: Record<string, KPIData>) => {
         const id = `scenario-${Date.now()}`;
         setAppState(prev => ({
             ...prev,
             scenarios: {
                 ...prev.scenarios,
-                [id]: { id, name, kpis: JSON.parse(JSON.stringify(kpis)), createdAt: new Date().toISOString() }
+                [id]: { id, name, kpis: snapshot ? JSON.parse(JSON.stringify(snapshot)) : JSON.parse(JSON.stringify(kpis)), createdAt: new Date().toISOString() }
             },
             activeScenarioId: id
         }));
@@ -323,38 +398,127 @@ const SimulationCanvas = () => {
         setAppState(prev => ({ ...prev, activeScenarioId: id }));
     }, []);
 
-    const onToggleExpand = useCallback((id: string) => {
+    const handleToggleExpand = useCallback((id: string) => {
         setKpis(prev => ({
             ...prev,
-            [id]: { ...prev[id], isExpanded: !prev[id].isExpanded }
+            [id]: {
+                ...prev[id],
+                isExpanded: !prev[id].isExpanded
+            }
         }));
-    }, [setKpis]);
+    }, []);
+
+    const handleExpandAll = useCallback(() => {
+        setKpis(prev => {
+            const next = { ...prev };
+            Object.keys(next).forEach(id => {
+                next[id] = { ...next[id], isExpanded: true };
+            });
+            return next;
+        });
+    }, []);
+
+    const handleCollapseAll = useCallback(() => {
+        setKpis(prev => {
+            const next = { ...prev };
+            Object.keys(next).forEach(id => {
+                next[id] = { ...next[id], isExpanded: false };
+            });
+            return next;
+        });
+    }, []);
+
+    const handleCustomDataImport = useCallback((newKpis: Record<string, KPIData>) => {
+        setAppState(prev => ({
+            ...prev,
+            scenarios: {
+                ...prev.scenarios,
+                [prev.activeScenarioId]: {
+                    ...prev.scenarios[prev.activeScenarioId],
+                    kpis: newKpis
+                }
+            }
+        }));
+    }, []);
 
     const onSimulationChange = useCallback((id: string, value: number) => {
+        const kpiName = kpis[id]?.label || id;
+        const oldVal = kpis[id]?.simulationValue ?? 0;
+
+        // Predetermine impact
+        const nextKpis = { ...kpis, [id]: { ...kpis[id], simulationValue: value } };
+        const { impactedKpis } = calculateValues(nextKpis, appState.dateRange);
+
+        logActivity({
+            action: 'Simulation Changed',
+            details: `Adjusted simulation on "${kpiName}" to ${value}`,
+            oldValue: oldVal,
+            newValue: value,
+            kpiId: id,
+            impactedKpis: Array.from(impactedKpis)
+        });
+
         setKpis(prev => ({
             ...prev,
             [id]: { ...prev[id], simulationValue: value }
         }));
-    }, [setKpis]);
+    }, [setKpis, kpis, appState.dateRange, logActivity]);
 
-    const onMonthlyOverrideChange = useCallback((id: string, monthIdx: number, value: number | string) => {
+    const onMonthlyOverrideChange = useCallback((id: string, monthIdx: number, value: number | string | undefined) => {
+        const kpiName = kpis[id]?.label || id;
+        // Use the actual displayed calculated value as old value, not raw data
+        const oldVal = calculatedValues[id]?.[monthIdx] ?? 0;
+
+        // Predetermine impact
+        const kpi = kpis[id];
+        const nextOverrides = [...(kpi?.monthlyOverrides || Array(12).fill(undefined))];
+        nextOverrides[monthIdx] = value;
+        const nextKpis = { ...kpis, [id]: { ...kpis[id], monthlyOverrides: nextOverrides, fullYearOverride: undefined } };
+        const { impactedKpis } = calculateValues(nextKpis, appState.dateRange);
+
+        logActivity({
+            action: 'Monthly Override',
+            details: `Override on "${kpiName}" for month index ${monthIdx}`,
+            oldValue: oldVal,
+            newValue: value,
+            kpiId: id,
+            impactedKpis: Array.from(impactedKpis)
+        });
+
         setKpis(prev => {
             const kpi = prev[id];
             const overrides = [...(kpi.monthlyOverrides || Array(12).fill(undefined))];
             overrides[monthIdx] = value;
             return {
                 ...prev,
-                [id]: { ...prev[id], monthlyOverrides: overrides, fullYearOverride: undefined } // Clear full year if monthly edited
+                [id]: { ...prev[id], monthlyOverrides: overrides, fullYearOverride: undefined }
             };
         });
-    }, [setKpis]);
+    }, [setKpis, kpis, calculatedValues, appState.dateRange, logActivity]);
 
-    const onFullYearOverrideChange = useCallback((id: string, value: number) => {
+    const onFullYearOverrideChange = useCallback((id: string, value: number | undefined) => {
+        const kpiName = kpis[id]?.label || id;
+        // Use the displayed total from calculated values as old value
+        const months = calculatedValues[id]?.slice(0, -1) || [];
+        const oldVal = kpis[id]?.fullYearOverride ?? months.reduce((a: number, b: number) => a + b, 0);
+
+        const nextKpis = { ...kpis, [id]: { ...kpis[id], fullYearOverride: value } };
+        const { impactedKpis } = calculateValues(nextKpis, appState.dateRange);
+
+        logActivity({
+            action: 'Full Year Override',
+            details: `Full year override set to ${value} on "${kpiName}"`,
+            oldValue: oldVal,
+            newValue: value,
+            kpiId: id,
+            impactedKpis: Array.from(impactedKpis)
+        });
+
         setKpis(prev => ({
             ...prev,
             [id]: { ...prev[id], fullYearOverride: value }
         }));
-    }, [setKpis]);
+    }, [setKpis, kpis, appState.dateRange, logActivity]);
 
     const onSimulationTypeToggle = useCallback((id: string) => {
         setKpis(prev => ({
@@ -407,27 +571,118 @@ const SimulationCanvas = () => {
         setKpis(prev => ({ ...prev, [newId]: newNode }));
     }, [months, setKpis]);
 
+    const onRowLockToggle = useCallback((id: string) => {
+        const kpiName = kpis[id]?.label || id;
+        const willLock = !kpis[id]?.isLocked;
+        logActivity({
+            action: willLock ? 'Row Locked' : 'Row Unlocked',
+            details: `${willLock ? 'Locked' : 'Unlocked'} all cells for "${kpiName}"`,
+            kpiId: id
+        });
+        setKpis(prev => {
+            const kpi = prev[id];
+            if (willLock) {
+                // Snapshot current calculated values as overrides so they persist after unlock
+                const currentCalc = calculatedValues[id];
+                const months = currentCalc ? currentCalc.slice(0, -1) : []; // exclude total
+                const overrides = months.map((v: number, i: number) => kpi.monthlyOverrides?.[i] ?? v);
+                return {
+                    ...prev,
+                    [id]: { ...kpi, isLocked: true, monthlyOverrides: overrides }
+                };
+            } else {
+                // Unlock — keep the snapshotted overrides so values don't drift
+                return {
+                    ...prev,
+                    [id]: { ...kpi, isLocked: false }
+                };
+            }
+        });
+    }, [setKpis, kpis, calculatedValues, logActivity]);
+
+    const onCellLockToggle = useCallback((id: string, monthIdx: number) => {
+        const kpiName = kpis[id]?.label || id;
+        setKpis(prev => {
+            const kpi = prev[id];
+            const locks = [...(kpi.lockedMonths || Array(12).fill(false))];
+            const isNowLocked = !locks[monthIdx];
+            locks[monthIdx] = isNowLocked;
+
+            logActivity({
+                action: isNowLocked ? 'Cell Locked' : 'Cell Unlocked',
+                details: `${isNowLocked ? 'Locked' : 'Unlocked'} month index ${monthIdx} for "${kpiName}"`,
+                kpiId: id
+            });
+
+            // Snapshot this cell's value as an override so it persists
+            if (isNowLocked) {
+                const currentVal = calculatedValues[id]?.[monthIdx] ?? 0;
+                const overrides = [...(kpi.monthlyOverrides || Array(12).fill(undefined))];
+                if (overrides[monthIdx] === undefined) {
+                    overrides[monthIdx] = currentVal;
+                }
+                return {
+                    ...prev,
+                    [id]: { ...kpi, lockedMonths: locks, monthlyOverrides: overrides }
+                };
+            }
+
+            return {
+                ...prev,
+                [id]: { ...kpi, lockedMonths: locks }
+            };
+        });
+    }, [setKpis, kpis, calculatedValues, logActivity]);
+
+    const onColumnLockChange = useCallback((idx: number) => {
+        logActivity({
+            action: 'Column Locked',
+            details: `Locked actuals up to month index ${idx}`
+        });
+        setAppState(prev => ({ ...prev, lockMonthIdx: idx }));
+    }, [setAppState, logActivity]);
+
     const onSettings = useCallback((id: string) => {
         setEditingId(id);
     }, []);
 
     const onReset = useCallback(() => {
+        logActivity({
+            action: 'Reset Scenario',
+            details: 'Cleared all overrides, simulations, and locks'
+        });
         setKpis(prev => {
             const next = { ...prev };
             Object.keys(next).forEach(id => {
                 next[id].simulationValue = 0;
                 next[id].monthlyOverrides = undefined;
+                next[id].fullYearOverride = undefined;
+                next[id].isLocked = false;
+                next[id].lockedMonths = undefined;
             });
             return next;
         });
-    }, [setKpis]);
+    }, [setKpis, logActivity]);
 
     const onResetKPI = useCallback((id: string) => {
+        const kpiName = kpis[id]?.label || id;
+        logActivity({
+            action: 'Reset KPI',
+            details: `Cleared all overrides and locks for "${kpiName}"`,
+            kpiId: id
+        });
         setKpis(prev => ({
             ...prev,
-            [id]: { ...prev[id], simulationValue: 0, monthlyOverrides: undefined }
+            [id]: {
+                ...prev[id],
+                simulationValue: 0,
+                monthlyOverrides: undefined,
+                fullYearOverride: undefined,
+                isLocked: false,
+                lockedMonths: undefined
+            }
         }));
-    }, [setKpis]);
+    }, [setKpis, kpis, logActivity]);
 
     const onDeleteKPI = useCallback((id: string) => {
         if (!confirm('Delete this KPI and its entire branch?')) return;
@@ -604,45 +859,72 @@ const SimulationCanvas = () => {
                 dateRange={appState.dateRange}
                 onDateRangeChange={(range) => setAppState(prev => ({ ...prev, dateRange: range }))}
                 onUploadData={handleUploadData}
+                onBack={onBack}
             >
-                <Routes>
-                    <Route path="/" element={
-                        <ReactFlowProvider>
-                            <SimulationCanvasInner
+                {Object.keys(kpis).length === 0 ? (
+                    <WelcomeScreen
+                        onImportData={handleCustomDataImport}
+                        onLoadSample={() => setKpis(() => initialKPIs)}
+                        monthsCount={appState.dateRange.endMonth - appState.dateRange.startMonth + 1}
+                    />
+                ) : (
+                    <Routes>
+                        <Route path="/" element={
+                            <ReactFlowProvider>
+                                <SimulationCanvasInner
+                                    kpis={kpis}
+                                    setKpis={setKpis}
+                                    calculatedValues={treeCalculatedValues}
+                                    baseValues={baseValues}
+                                    monthLabels={monthLabels}
+                                    isSyncEnabled={appState.isSyncEnabled}
+                                    onSyncToggle={onSyncToggle}
+                                    onToggleExpand={handleToggleExpand}
+                                    onSimulationChange={onSimulationChange}
+                                    onSimulationTypeToggle={onSimulationTypeToggle}
+                                    onAddChild={onAddChild}
+                                    onSettings={onSettings}
+                                    onResetKPI={onResetKPI}
+                                    onFullYearOverrideChange={onFullYearOverrideChange}
+                                    isScenarioMode={isScenarioMode}
+                                    onAddRoot={onAddRoot}
+                                    scenarios={appState.scenarios}
+                                    activeScenarioId={appState.activeScenarioId}
+                                    onScenarioSelect={onScenarioSelect}
+                                    onScenarioAdd={onScenarioAdd}
+                                />
+                            </ReactFlowProvider>
+                        } />
+                        <Route path="/tabular" element={
+                            <SpreadsheetView
                                 kpis={kpis}
-                                setKpis={setKpis}
                                 calculatedValues={calculatedValues}
-                                baseValues={baseValues}
-                                onToggleExpand={onToggleExpand}
-                                onSimulationChange={onSimulationChange}
-                                onSimulationTypeToggle={onSimulationTypeToggle}
-                                onAddChild={onAddChild}
-                                onSettings={onSettings}
-                                onResetKPI={onResetKPI}
-                                isScenarioMode={isScenarioMode}
-                                onAddRoot={onAddRoot}
+                                onMonthlyOverrideChange={onMonthlyOverrideChange}
+                                onFullYearOverrideChange={onFullYearOverrideChange}
                                 scenarios={appState.scenarios}
                                 activeScenarioId={appState.activeScenarioId}
                                 onScenarioSelect={onScenarioSelect}
                                 onScenarioAdd={onScenarioAdd}
+                                dateRange={appState.dateRange}
+                                onToggleExpand={handleToggleExpand}
+                                onExpandAll={handleExpandAll}
+                                onCollapseAll={handleCollapseAll}
+                                onCustomDataImport={handleCustomDataImport}
+                                onRowLockToggle={onRowLockToggle}
+                                onCellLockToggle={onCellLockToggle}
+                                onColumnLockChange={onColumnLockChange}
+                                onDateRangeChange={(range: any) => setAppState((prev: any) => ({ ...prev, dateRange: range }))}
                             />
-                        </ReactFlowProvider>
-                    } />
-                    <Route path="/spreadsheet" element={
-                        <SpreadsheetView
-                            kpis={kpis}
-                            calculatedValues={calculatedValues}
-                            onMonthlyOverrideChange={onMonthlyOverrideChange}
-                            onFullYearOverrideChange={onFullYearOverrideChange}
-                            scenarios={appState.scenarios}
-                            activeScenarioId={appState.activeScenarioId}
-                            onScenarioSelect={onScenarioSelect}
-                            onScenarioAdd={onScenarioAdd}
-                            dateRange={appState.dateRange}
-                            onToggleExpand={onToggleExpand}
-                        />
-                    } />
-                </Routes>
+                        } />
+                        <Route path="/compare" element={<ComparisonView scenarios={appState.scenarios} dateRange={appState.dateRange} />} />
+                        <Route path="/log" element={
+                            <LogView
+                                logs={appState.activityLog}
+                                kpiNames={Object.fromEntries(Object.values(kpis).map(k => [k.id, k.label]))}
+                            />
+                        } />
+                    </Routes>
+                )}
             </MainLayout>
 
             {editingId && (
@@ -720,6 +1002,7 @@ const SimulationCanvas = () => {
                                     />
                                 </div>
                             </div>
+
                         </div>
                         <div className="modal-footer">
                             <button className="danger-btn" onClick={() => onDeleteKPI(editingId)}>

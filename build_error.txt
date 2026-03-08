@@ -1,0 +1,87 @@
+﻿
+> forecasting@0.0.0 build
+> tsc -b && vite build
+
+[36mvite v6.4.1 [32mbuilding for production...[36m[39m
+transforming...
+[32mΓ£ô[39m 31 modules transformed.
+node.exe : [31mΓ£ù[39m 
+Build failed in 571ms
+At C:\Program 
+Files\nodejs\npm.ps1:29 
+char:3
++   & $NODE_EXE 
+$NPM_CLI_JS $args
++   ~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo        
+      : NotSpecified: (  
+  [31mΓ£ù[39m Build fa   
+ iled in 571ms:String)    
+ [], RemoteException
+    + FullyQualifiedError 
+   Id : NativeCommandErr  
+  or
+ 
+[31merror during build:
+[31m[vite]: Rollup 
+failed to resolve import "
+@fortune-sheet/core/css/co
+re.css" from 
+"D:/direacted graph/src/co
+mponents/SpreadsheetView.t
+sx".
+This is most likely 
+unintended because it can 
+break your application at 
+runtime.
+If you do want to 
+externalize this module 
+explicitly add it to
+`build.rollupOptions.exter
+nal`[31m
+    at viteLog (file:///D:
+/direacted%20graph/node_mo
+dules/vite/dist/node/chunk
+s/dep-D4NMHUTW.js:46374:15
+)
+    at file:///D:/direacte
+d%20graph/node_modules/vit
+e/dist/node/chunks/dep-D4N
+MHUTW.js:46432:18
+    at onwarn (file:///D:/
+direacted%20graph/node_mod
+ules/@vitejs/plugin-react/
+dist/index.js:76:7)
+    at file:///D:/direacte
+d%20graph/node_modules/vit
+e/dist/node/chunks/dep-D4N
+MHUTW.js:46430:7
+    at onRollupLog (file:/
+//D:/direacted%20graph/nod
+e_modules/vite/dist/node/c
+hunks/dep-D4NMHUTW.js:4642
+2:5)
+    at onLog (file:///D:/d
+ireacted%20graph/node_modu
+les/vite/dist/node/chunks/
+dep-D4NMHUTW.js:46072:7)
+    at file:///D:/direacte
+d%20graph/node_modules/rol
+lup/dist/es/shared/node-en
+try.js:20981:32
+    at Object.logger [as 
+onLog] (file:///D:/direact
+ed%20graph/node_modules/ro
+llup/dist/es/shared/node-e
+ntry.js:22968:9)
+    at ModuleLoader.handle
+InvalidResolvedId (file://
+/D:/direacted%20graph/node
+_modules/rollup/dist/es/sh
+ared/node-entry.js:21712:2
+6)
+    at file:///D:/direacte
+d%20graph/node_modules/rol
+lup/dist/es/shared/node-en
+try.js:21670:26[39m

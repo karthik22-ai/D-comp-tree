@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Share2, Calendar, RefreshCcw, TrendingUp, Upload } from 'lucide-react';
+import { Share2, Calendar, RefreshCcw, TrendingUp, Upload, ArrowLeft } from 'lucide-react';
 import type { DateRange } from '../types';
 
 interface HeaderProps {
@@ -9,9 +9,10 @@ interface HeaderProps {
     dateRange: DateRange;
     onDateRangeChange: (range: DateRange) => void;
     onUploadData: (file: File) => void;
+    onBack?: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateRangeChange, onUploadData }) => {
+const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateRangeChange, onUploadData, onBack }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -24,6 +25,19 @@ const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateR
     return (
         <header className="app-header">
             <div className="header-left">
+                {onBack && (
+                    <button
+                        onClick={onBack}
+                        style={{
+                            background: 'none', border: 'none', color: '#64748b', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px',
+                            marginRight: 12
+                        }}
+                        title="Back to Projects"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                )}
                 <div className="logo-section">
                     <Share2 className="logo-icon" size={20} />
                     <span className="logo-text">Strategic Forecast</span>
@@ -32,8 +46,14 @@ const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateR
                     <NavLink to="/" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                         Tree View
                     </NavLink>
-                    <NavLink to="/spreadsheet" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                        Spreadsheet
+                    <NavLink to="/tabular" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        Tabular View
+                    </NavLink>
+                    <NavLink to="/compare" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        Compare
+                    </NavLink>
+                    <NavLink to="/log" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        Activity Log
                     </NavLink>
                 </nav>
             </div>
@@ -76,6 +96,7 @@ const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateR
             </div>
 
             <div className="header-right">
+
                 <button className="header-btn secondary" onClick={() => fileInputRef.current?.click()} title="Upload Data Model (JSON/Excel)">
                     <Upload size={16} /> <span>Upload Data</span>
                 </button>

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { Handle, Position, type NodeProps } from 'reactflow';
 import {
     Plus,
@@ -30,6 +30,7 @@ interface KPINodeProps {
     simulationType: 'PERCENT' | 'ABSOLUTE';
     calculatedValue: number[];
     baselineData: number[];
+    monthLabels: string[];
     isScenarioMode: boolean;
     color?: string;
     desiredTrend?: 'INCREASE' | 'DECREASE';
@@ -37,25 +38,25 @@ interface KPINodeProps {
     onToggleExpand: (id: string) => void;
     onSimulationChange: (id: string, value: number) => void;
     onSimulationTypeToggle: (id: string) => void;
+    onFullYearOverrideChange: (id: string, value: number | undefined) => void;
     onAddChild: (id: string) => void;
-    onEdit: (id: string) => void;
     onSettings: (id: string) => void;
     onResetKPI: (id: string) => void;
     semantic?: SemanticAttributes;
 }
 
-const Sparkline = ({ values, baseline, color = '#3b82f6', showScenario = true }: { values: number[], baseline: number[], color?: string, showScenario?: boolean }) => {
+const Sparkline = ({ values, baseline, labels, color = '#3b82f6', showScenario = true }: { values: number[], baseline: number[], labels: string[], color?: string, showScenario?: boolean }) => {
     if (!values || values.length === 0) return null;
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const monthlyValues = values.slice(0, 12);
-    const monthlyBaseline = baseline.slice(0, 12);
+    const periodCount = values.length - 1; // Exclude total
+    const monthlyValues = values.slice(0, periodCount);
+    const monthlyBaseline = baseline.slice(0, periodCount);
     const allPlotValues = [...monthlyValues, ...monthlyBaseline];
     const min = Math.min(...allPlotValues);
     const max = Math.max(...allPlotValues);
     const range = max - min || 1;
-    const width = 200; // Increased width for larger card
-    const height = 45; // slightly taller
+    const width = 200;
+    const height = 45;
 
     const getPoints = (data: number[]) => data.map((v, i) => ({
         x: (i / (data.length - 1)) * width,
@@ -80,23 +81,23 @@ const Sparkline = ({ values, baseline, color = '#3b82f6', showScenario = true }:
                 )}
 
                 {/* Interactive Points */}
-                {months.map((m, i) => (
-                    <g key={m} className="spark-point-group">
+                {labels.map((m, i) => (
+                    <g key={`${m}-${i}`} className="spark-point-group">
                         <rect
-                            x={(i / (months.length - 1)) * width - 10}
+                            x={(i / (labels.length - 1)) * width - 10}
                             y={0}
                             width={20}
                             height={height}
                             fill="transparent"
                         />
                         <circle
-                            cx={(i / (months.length - 1)) * width}
-                            cy={height - ((values[i] - min) / range) * height}
+                            cx={(i / (labels.length - 1)) * width}
+                            cy={height - ((monthlyValues[i] - min) / range) * height}
                             r="3"
                             className="spark-point"
                             fill={color}
                         />
-                        <foreignObject x={(i / (months.length - 1)) * width - 40} y={-30} width="80" height="25" className="spark-tooltip">
+                        <foreignObject x={(i / (labels.length - 1)) * width - 40} y={-30} width="80" height="25" className="spark-tooltip">
                             <div className="tooltip-content">
                                 {m}: {monthlyValues[i]?.toLocaleString()}
                             </div>
@@ -116,26 +117,74 @@ const KPINode = ({ data }: NodeProps<KPINodeProps>) => {
         formula,
         isExpanded,
         simulationValue,
+        simulationType,
         calculatedValue,
         baselineData,
+        monthLabels,
         isScenarioMode,
         color,
         onToggleExpand,
         onAddChild,
-        onEdit,
         onSettings,
         onResetKPI,
         semantic // Added semantic to destructuring
     } = data;
 
-    const currentVal = calculatedValue[12] ?? 0;
-    const baselineVal = baselineData[12] ?? calculatedValue[12] ?? 0;
+    const periodCount = calculatedValue.length - 1;
+    const currentVal = calculatedValue[periodCount] ?? 0;
+    const baselineVal = baselineData[periodCount] ?? calculatedValue[periodCount] ?? 0;
+
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState('');
+    const [editMode, setEditMode] = useState<'VALUE' | 'PERCENT'>('VALUE');
+    const inputRef = useRef<HTMLInputElement>(null);
 
     // Variance is annual now
     const variance = ((currentVal - baselineVal) / (Math.abs(baselineVal) || 1)) * 100;
 
     const isPositiveImpact = data.desiredTrend === 'DECREASE' ? variance <= 0 : variance >= 0;
     const varianceClass = Math.abs(variance) < 0.01 ? 'neutral' : (isPositiveImpact ? 'pos' : 'neg');
+
+    useEffect(() => {
+        if (isEditing && inputRef.current) {
+            inputRef.current.focus();
+            inputRef.current.select();
+        }
+    }, [isEditing]);
+
+    const handleEditStart = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!isScenarioMode) return;
+        // Default to VALUE mode, populate with the actual current full-year value
+        setEditMode('VALUE');
+        setEditValue(Math.round(currentVal).toString());
+        setIsEditing(true);
+    };
+
+    const handleEditCommit = () => {
+        setIsEditing(false);
+        const num = parseFloat(editValue);
+        if (isNaN(num)) return;
+
+        if (editMode === 'PERCENT') {
+            // % mode: apply as simulation percentage change
+            if (simulationType !== 'PERCENT') {
+                data.onSimulationTypeToggle(id);
+            }
+            data.onSimulationChange(id, num);
+        } else {
+            // VALUE mode: set the full year override to the exact number
+            data.onFullYearOverrideChange(id, num);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter') {
+            handleEditCommit();
+        } else if (e.key === 'Escape') {
+            setIsEditing(false);
+        }
+    };
 
     return (
         <div
@@ -153,14 +202,52 @@ const KPINode = ({ data }: NodeProps<KPINodeProps>) => {
                     <span className="node-formula">{formula !== 'NONE' ? formula : ''}</span>
                 </div>
 
-                <div className="node-value-center" onClick={(e) => { e.stopPropagation(); onEdit(id); }}>
-                    <span className="node-unit">{unit}</span>
-                    <span className="node-value">{formatValue(currentVal)}</span>
-                    <div className="node-trend-indicator" title="Annual variance vs Baseline">
-                        {variance >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                        {Math.abs(variance).toFixed(1)}%
+                {isEditing ? (
+                    <div className="node-value-center editing" onClick={e => e.stopPropagation()}>
+                        <div className="inline-editor-wrapper">
+                            <input
+                                ref={inputRef}
+                                type="number"
+                                className="inline-val-input"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onBlur={handleEditCommit}
+                                onKeyDown={handleKeyDown}
+                                placeholder="0"
+                            />
+                            <button
+                                className="inline-type-toggle"
+                                onMouseDown={(e) => {
+                                    e.preventDefault(); // Prevent blur when clicking toggle
+                                    setEditMode(prev => prev === 'PERCENT' ? 'VALUE' : 'PERCENT');
+                                    // When switching modes, update the displayed value
+                                    if (editMode === 'VALUE') {
+                                        // Switching to %: clear the value so user can type percentage
+                                        setEditValue('');
+                                    } else {
+                                        // Switching to VALUE: populate with current full-year value
+                                        setEditValue(Math.round(currentVal).toString());
+                                    }
+                                }}
+                            >
+                                {editMode === 'PERCENT' ? '%' : unit}
+                            </button>
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div
+                        className={`node-value-center ${isScenarioMode ? 'editable-hover' : ''}`}
+                        onClick={handleEditStart}
+                        title={isScenarioMode ? "Click to quick-edit simulation value" : undefined}
+                    >
+                        <span className="node-unit">{unit}</span>
+                        <span className="node-value">{formatValue(currentVal)}</span>
+                        <div className="node-trend-indicator" title="Annual variance vs Baseline">
+                            {variance >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                            {Math.abs(variance).toFixed(1)}%
+                        </div>
+                    </div>
+                )}
 
                 <div className="node-footer">
                     <div className="footer-stat">
@@ -200,9 +287,20 @@ const KPINode = ({ data }: NodeProps<KPINodeProps>) => {
                 <Sparkline
                     values={isScenarioMode ? calculatedValue : baselineData}
                     baseline={baselineData}
+                    labels={monthLabels}
                     color={color}
                     showScenario={isScenarioMode}
                 />
+            </div>
+
+            {/* Monthly Values Mini-Bar */}
+            <div className="node-monthly-bar">
+                {monthLabels.map((m, i) => (
+                    <div key={i} className="monthly-mini-cell" title={`${m}: ${(calculatedValue[i] ?? 0).toLocaleString()}`}>
+                        <span className="mini-month">{m[0]}</span>
+                        <span className="mini-val">{formatValue(calculatedValue[i] ?? 0)}</span>
+                    </div>
+                ))}
             </div>
 
             <div className="node-expansion-toggle" onClick={(e) => { e.stopPropagation(); onToggleExpand(id); }}>

@@ -11,12 +11,14 @@
   },
   "dependencies": {
     "@types/dagre": "^0.7.54",
+    "@types/uuid": "^10.0.0",
     "dagre": "^0.8.5",
     "lucide-react": "^0.576.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.13.1",
     "reactflow": "^11.11.4",
+    "uuid": "^13.0.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
