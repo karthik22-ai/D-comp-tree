@@ -55,7 +55,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 12px;
   z-index: 1000;
   box-shadow: var(--shadow-sm);
 }
@@ -64,7 +64,8 @@ body {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 32px;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .logo-section {
@@ -74,11 +75,14 @@ body {
   color: var(--accent-blue);
   font-weight: 800;
   font-size: 1.1rem;
+  flex-shrink: 0;
 }
 
 .header-nav {
   display: flex;
-  gap: 8px;
+  gap: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .nav-link {
@@ -104,11 +108,14 @@ body {
 .date-picker-bar {
   background: #f8fafc;
   border: 1px solid var(--panel-border);
-  padding: 6px 16px;
+  padding: 6px 10px;
   border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .calendar-icon {
@@ -132,15 +139,49 @@ body {
   cursor: pointer;
 }
 
+.header-select {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  outline: none;
+  min-width: 140px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.header-select:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.header-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+}
+
+.header-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .header-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
+  flex-shrink: 0;
   cursor: pointer;
+  height: 24px;
   transition: all 0.2s;
 }
 
@@ -154,6 +195,30 @@ body {
   background: #f8fafc;
   border-color: #cbd5e1;
   color: var(--text-primary);
+}
+
+.forecast-btn {
+  background: var(--accent-blue) !important;
+  color: white !important;
+  border: 1px solid var(--accent-blue) !important;
+}
+
+.forecast-btn:hover {
+  background: #2563eb !important;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+  transform: translateY(-1px);
+}
+
+.reset-btn {
+  border: 1px solid #fca5a5 !important;
+  color: #ef4444 !important;
+}
+
+.reset-btn:hover {
+  background: #fef2f2 !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.1);
+  transform: translateY(-1px);
 }
 
 .user-profile {
@@ -231,22 +296,28 @@ body {
 .table-scroll {
   flex: 1;
   overflow: auto;
-  padding: 24px;
+  padding: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin: 24px;
+  background: white;
 }
 
 .sheet-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
   background: white;
 }
 
 .sheet-table th,
 .sheet-table td {
   border: 1px solid #e2e8f0;
-  padding: 4px 8px;
-  /* Making it more compact like an excel sheet */
+  padding: 2px 6px;
   text-align: right;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  height: 28px;
   transition: background 0.1s;
 }
 
@@ -265,22 +336,61 @@ body {
   z-index: 10;
 }
 
-.sheet-table td.kpi-name-cell {
+.month-column {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
+.sheet-table td.kpi-name-cell,
+.sheet-table th.kpi-name-cell {
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
   text-align: left;
   font-weight: 600;
+  font-size: 0.8rem;
   color: var(--text-primary);
   background: white;
   position: sticky;
   left: 0;
   z-index: 5;
+  border-right: 2px solid #cbd5e1 !important;
 }
 
 .sheet-table th.kpi-name-cell {
-  position: sticky;
-  top: 0;
-  left: 0;
   z-index: 15;
-  background: white;
+  top: 0;
+}
+
+.unit-column {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  position: sticky;
+  left: 280px;
+  z-index: 5;
+  background: white !important;
+  text-align: center !important;
+  border-right: 1px solid #cbd5e1 !important;
+}
+
+.lock-column {
+  width: 50px;
+  min-width: 50px;
+  max-width: 50px;
+  position: sticky;
+  left: 360px;
+  z-index: 5;
+  background: white !important;
+  text-align: center !important;
+  border-right: 2px solid #cbd5e1 !important;
+}
+
+.sheet-table th.unit-column,
+.sheet-table th.lock-column {
+  z-index: 15;
+  top: 0;
 }
 
 .sheet-table tr:hover td {
@@ -312,9 +422,10 @@ body {
   background: transparent;
   text-align: right;
   font-family: var(--font-main);
+  font-size: 0.8rem;
   font-weight: 500;
   outline: none;
-  padding: 4px 8px;
+  padding: 2px 4px;
   border-radius: 4px;
   transition: all 0.2s;
 }
@@ -520,21 +631,49 @@ body {
 
 .card-controls {
   position: absolute;
-  top: 50%;
-  left: calc(100% + 12px);
-  transform: translateY(-50%);
+  top: 0;
+  right: -36px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   opacity: 0;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
-  z-index: 10;
+  padding: 4px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
 }
 
 .kpi-node.valq-style:hover .card-controls {
   opacity: 1;
-  pointer-events: auto;
+}
+
+.icon-btn-sm {
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  background: white;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.icon-btn-sm:hover {
+  background: #f1f5f9;
+  color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.icon-btn-sm.danger:hover {
+  background: #fef2f2;
+  color: #ef4444;
+  border-color: #fca5a5;
 }
 
 .semantic-pill {

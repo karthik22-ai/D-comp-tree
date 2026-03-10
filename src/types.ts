@@ -74,6 +74,7 @@ export interface AppState {
   activityLog: LogEntry[];
   lockMonthIdx?: number;
   isSyncEnabled: boolean;
+  valueDisplayType?: 'absolute' | 'variance';
 }
 
 export interface SimulationState {

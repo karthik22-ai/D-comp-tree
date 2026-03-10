@@ -10,9 +10,13 @@ interface HeaderProps {
     onDateRangeChange: (range: DateRange) => void;
     onUploadData: (file: File) => void;
     onBack?: () => void;
+    isSyncEnabled?: boolean;
+    onSyncToggle?: () => void;
+    valueDisplayType: 'absolute' | 'variance';
+    onValueDisplayTypeChange: (type: 'absolute' | 'variance') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateRangeChange, onUploadData, onBack }) => {
+const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateRangeChange, onUploadData, onBack, isSyncEnabled, onSyncToggle, valueDisplayType, onValueDisplayTypeChange }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -97,6 +101,27 @@ const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateR
 
             <div className="header-right">
 
+                {onSyncToggle && (
+                    <button 
+                        className={`header-btn secondary sync-btn ${isSyncEnabled ? 'active' : ''}`} 
+                        onClick={onSyncToggle}
+                        title={isSyncEnabled ? "Sync is ON" : "Sync is OFF"}
+                    >
+                        <RefreshCcw size={16} className={isSyncEnabled ? 'spin-slow' : ''} />
+                        <span>{isSyncEnabled ? 'SYNC' : 'SYNC OFF'}</span>
+                    </button>
+                )}
+
+                <div className="value-type-selector">
+                    <select 
+                        className="header-select"
+                        value={valueDisplayType}
+                        onChange={(e) => onValueDisplayTypeChange(e.target.value as 'absolute' | 'variance')}
+                    >
+                        <option value="absolute">Absolute Value</option>
+                        <option value="variance">Variance Value</option>
+                    </select>
+                </div>
                 <button className="header-btn secondary" onClick={() => fileInputRef.current?.click()} title="Upload Data Model (JSON/Excel)">
                     <Upload size={16} /> <span>Upload Data</span>
                 </button>
@@ -107,12 +132,14 @@ const Header: React.FC<HeaderProps> = ({ onReset, onForecast, dateRange, onDateR
                     ref={fileInputRef}
                     onChange={handleFileChange}
                 />
-                <button className="header-btn secondary" onClick={onForecast} title="Generate Forecast">
-                    <TrendingUp size={16} /> <span>Forecast</span>
-                </button>
-                <button className="header-btn secondary" onClick={onReset} title="Reset Simulation">
-                    <RefreshCcw size={16} /> <span>Reset</span>
-                </button>
+                <div className="header-actions-group">
+                    <button className="header-btn forecast-btn" onClick={onForecast} title="Generate Forecast">
+                        <TrendingUp size={14} /> <span>Forecast</span>
+                    </button>
+                    <button className="header-btn reset-btn" onClick={onReset} title="Reset Simulation">
+                        <RefreshCcw size={14} /> <span>Reset</span>
+                    </button>
+                </div>
                 <div className="user-profile">
                     <div className="avatar">JD</div>
                 </div>

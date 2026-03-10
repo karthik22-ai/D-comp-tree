@@ -13,7 +13,7 @@ import type { Edge, Node } from 'reactflow';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import 'reactflow/dist/style.css';
-import { Plus, X, Trash2, Layers, TrendingUp, RefreshCcw } from 'lucide-react';
+import { Plus, X, Trash2, Layers, TrendingUp } from 'lucide-react';
 import { generateForecast, type ForecastMethod } from '../utils/forecast';
 import { initialKPIs } from '../data';
 import { calculateValues } from '../utils/calc';
@@ -37,8 +37,6 @@ const SimulationCanvasInner = ({
     calculatedValues,
     baseValues,
     monthLabels,
-    isSyncEnabled,
-    onSyncToggle,
     onToggleExpand,
     onSimulationChange,
     onSimulationTypeToggle,
@@ -51,7 +49,8 @@ const SimulationCanvasInner = ({
     scenarios,
     activeScenarioId,
     onScenarioSelect,
-    onScenarioAdd
+    onScenarioAdd,
+    valueDisplayType
 }: any) => {
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -141,7 +140,8 @@ const SimulationCanvasInner = ({
                     baselineData: baseValues[kpi.id] ?? [],
                     monthLabels,
                     isScenarioMode,
-                    desiredTrend: kpi.desiredTrend
+                    desiredTrend: kpi.desiredTrend,
+                    valueDisplayType: valueDisplayType || 'absolute'
                 }
             });
 
@@ -188,7 +188,7 @@ const SimulationCanvasInner = ({
 
         setNodes(newNodes);
         setEdges(newEdges);
-    }, [kpis, calculatedValues, monthLabels, onToggleExpand, onSimulationChange, onSimulationTypeToggle, onFullYearOverrideChange, onAddChild, onSettings, onResetKPI, isScenarioMode, setNodes, setEdges]);
+    }, [kpis, calculatedValues, baseValues, valueDisplayType, monthLabels, onToggleExpand, onSimulationChange, onSimulationTypeToggle, onFullYearOverrideChange, onAddChild, onSettings, onResetKPI, isScenarioMode, setNodes, setEdges]);
 
     return (
         <div className="canvas-wrapper">
@@ -236,14 +236,6 @@ const SimulationCanvasInner = ({
                         )}
                     </div>
 
-                    <button
-                        className={`sync-toggle-mini ${isSyncEnabled ? 'active' : 'paused'}`}
-                        onClick={onSyncToggle}
-                        title={isSyncEnabled ? "Pause Sync" : "Enable Sync"}
-                    >
-                        <RefreshCcw size={12} className={isSyncEnabled ? 'spin-slow' : ''} />
-                        <span>{isSyncEnabled ? 'SYNC ON' : 'SYNC OFF'}</span>
-                    </button>
                 </Panel>
                 <Panel position="top-left" className="canvas-panel">
                     <button className="add-root-btn" onClick={onAddRoot}>
@@ -285,8 +277,8 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSample
                         endYear: parsed.selectedYear || new Date().getFullYear()
                     };
                 }
-                if (parsed.isSyncEnabled === undefined) {
-                    parsed.isSyncEnabled = true;
+                if (parsed.valueDisplayType === undefined) {
+                    parsed.valueDisplayType = 'absolute';
                 }
                 return parsed as AppState;
             } catch (e) {
@@ -305,7 +297,8 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSample
                 endYear: new Date().getFullYear()
             },
             activityLog: [],
-            isSyncEnabled: true
+            isSyncEnabled: true,
+            valueDisplayType: 'absolute'
         };
     });
 
@@ -347,16 +340,40 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSample
     const kpis = activeScenario.kpis;
 
     const setKpis = useCallback((updater: (prev: Record<string, KPIData>) => Record<string, KPIData>) => {
-        setAppState(prev => ({
-            ...prev,
-            scenarios: {
-                ...prev.scenarios,
-                [prev.activeScenarioId]: {
-                    ...prev.scenarios[prev.activeScenarioId],
-                    kpis: updater(prev.scenarios[prev.activeScenarioId].kpis)
-                }
+        setAppState(prev => {
+            const activeId = prev.activeScenarioId;
+            if (activeId === 'base') {
+                const newId = `scenario-${Date.now()}`;
+                const baseName = "Scenario";
+                const existingCount = Object.values(prev.scenarios).filter(s => s.name.startsWith(baseName)).length;
+                const newName = `${baseName} ${existingCount + 1}`;
+                
+                return {
+                    ...prev,
+                    scenarios: {
+                        ...prev.scenarios,
+                        [newId]: { 
+                            id: newId, 
+                            name: newName, 
+                            kpis: updater(JSON.parse(JSON.stringify(prev.scenarios['base'].kpis))), 
+                            createdAt: new Date().toISOString() 
+                        }
+                    },
+                    activeScenarioId: newId
+                };
             }
-        }));
+            
+            return {
+                ...prev,
+                scenarios: {
+                    ...prev.scenarios,
+                    [activeId]: {
+                        ...prev.scenarios[activeId],
+                        kpis: updater(prev.scenarios[activeId].kpis)
+                    }
+                }
+            };
+        });
     }, []);
 
     const monthLabels = useMemo(() => {
@@ -380,6 +397,10 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSample
 
     const onSyncToggle = useCallback(() => {
         setAppState(prev => ({ ...prev, isSyncEnabled: !prev.isSyncEnabled }));
+    }, []);
+
+    const onValueDisplayTypeChange = useCallback((type: 'absolute' | 'variance') => {
+        setAppState(prev => ({ ...prev, valueDisplayType: type }));
     }, []);
 
     const onScenarioAdd = useCallback((name: string, snapshot?: Record<string, KPIData>) => {
@@ -429,16 +450,34 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSample
     }, []);
 
     const handleCustomDataImport = useCallback((newKpis: Record<string, KPIData>) => {
-        setAppState(prev => ({
-            ...prev,
-            scenarios: {
-                ...prev.scenarios,
-                [prev.activeScenarioId]: {
-                    ...prev.scenarios[prev.activeScenarioId],
-                    kpis: newKpis
-                }
+        setAppState(prev => {
+            const activeId = prev.activeScenarioId;
+            if (activeId === 'base') {
+                const newId = `scenario-${Date.now()}`;
+                const baseName = "Scenario";
+                const existingCount = Object.values(prev.scenarios).filter(s => s.name.startsWith(baseName)).length;
+                const newName = `${baseName} ${existingCount + 1}`;
+                
+                return {
+                    ...prev,
+                    scenarios: {
+                        ...prev.scenarios,
+                        [newId]: { id: newId, name: newName, kpis: newKpis, createdAt: new Date().toISOString() }
+                    },
+                    activeScenarioId: newId
+                };
             }
-        }));
+            return {
+                ...prev,
+                scenarios: {
+                    ...prev.scenarios,
+                    [activeId]: {
+                        ...prev.scenarios[activeId],
+                        kpis: newKpis
+                    }
+                }
+            };
+        });
     }, []);
 
     const onSimulationChange = useCallback((id: string, value: number) => {
@@ -860,6 +899,10 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSample
                 onDateRangeChange={(range) => setAppState(prev => ({ ...prev, dateRange: range }))}
                 onUploadData={handleUploadData}
                 onBack={onBack}
+                isSyncEnabled={appState.isSyncEnabled}
+                onSyncToggle={onSyncToggle}
+                valueDisplayType={appState.valueDisplayType}
+                onValueDisplayTypeChange={onValueDisplayTypeChange}
             >
                 {Object.keys(kpis).length === 0 ? (
                     <WelcomeScreen
@@ -892,6 +935,7 @@ const SimulationCanvas: React.FC<SimulationCanvasProps> = ({ projectId, isSample
                                     activeScenarioId={appState.activeScenarioId}
                                     onScenarioSelect={onScenarioSelect}
                                     onScenarioAdd={onScenarioAdd}
+                                    valueDisplayType={appState.valueDisplayType}
                                 />
                             </ReactFlowProvider>
                         } />

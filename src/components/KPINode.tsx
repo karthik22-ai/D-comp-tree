@@ -42,72 +42,11 @@ interface KPINodeProps {
     onAddChild: (id: string) => void;
     onSettings: (id: string) => void;
     onResetKPI: (id: string) => void;
+    onForecastKPI: (id: string) => void;
     semantic?: SemanticAttributes;
+    valueDisplayType?: 'absolute' | 'variance';
 }
 
-const Sparkline = ({ values, baseline, labels, color = '#3b82f6', showScenario = true }: { values: number[], baseline: number[], labels: string[], color?: string, showScenario?: boolean }) => {
-    if (!values || values.length === 0) return null;
-
-    const periodCount = values.length - 1; // Exclude total
-    const monthlyValues = values.slice(0, periodCount);
-    const monthlyBaseline = baseline.slice(0, periodCount);
-    const allPlotValues = [...monthlyValues, ...monthlyBaseline];
-    const min = Math.min(...allPlotValues);
-    const max = Math.max(...allPlotValues);
-    const range = max - min || 1;
-    const width = 200;
-    const height = 45;
-
-    const getPoints = (data: number[]) => data.map((v, i) => ({
-        x: (i / (data.length - 1)) * width,
-        y: height - ((v - min) / range) * height
-    }));
-
-    const baselinePoints = getPoints(monthlyBaseline);
-    const scenarioPoints = getPoints(monthlyValues);
-
-    const baselineD = `M ${baselinePoints.map(p => `${p.x},${p.y}`).join(' L ')}`;
-    const scenarioD = `M ${scenarioPoints.map(p => `${p.x},${p.y}`).join(' L ')}`;
-
-    return (
-        <div className="sparkline-wrapper">
-            <svg width={width} height={height} className="sparkline-svg">
-                {/* Baseline Guide */}
-                <path d={baselineD} fill="none" stroke="#e2e8f0" strokeWidth="2" strokeDasharray="4 2" />
-
-                {/* Scenario Path */}
-                {showScenario && (
-                    <path d={scenarioD} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                )}
-
-                {/* Interactive Points */}
-                {labels.map((m, i) => (
-                    <g key={`${m}-${i}`} className="spark-point-group">
-                        <rect
-                            x={(i / (labels.length - 1)) * width - 10}
-                            y={0}
-                            width={20}
-                            height={height}
-                            fill="transparent"
-                        />
-                        <circle
-                            cx={(i / (labels.length - 1)) * width}
-                            cy={height - ((monthlyValues[i] - min) / range) * height}
-                            r="3"
-                            className="spark-point"
-                            fill={color}
-                        />
-                        <foreignObject x={(i / (labels.length - 1)) * width - 40} y={-30} width="80" height="25" className="spark-tooltip">
-                            <div className="tooltip-content">
-                                {m}: {monthlyValues[i]?.toLocaleString()}
-                            </div>
-                        </foreignObject>
-                    </g>
-                ))}
-            </svg>
-        </div>
-    );
-};
 
 const KPINode = ({ data }: NodeProps<KPINodeProps>) => {
     const {
@@ -120,14 +59,14 @@ const KPINode = ({ data }: NodeProps<KPINodeProps>) => {
         simulationType,
         calculatedValue,
         baselineData,
-        monthLabels,
         isScenarioMode,
         color,
         onToggleExpand,
         onAddChild,
         onSettings,
         onResetKPI,
-        semantic // Added semantic to destructuring
+        semantic, 
+        valueDisplayType
     } = data;
 
     const periodCount = calculatedValue.length - 1;
@@ -240,8 +179,11 @@ const KPINode = ({ data }: NodeProps<KPINodeProps>) => {
                         onClick={handleEditStart}
                         title={isScenarioMode ? "Click to quick-edit simulation value" : undefined}
                     >
-                        <span className="node-unit">{unit}</span>
-                        <span className="node-value">{formatValue(currentVal)}</span>
+                        <span className="node-unit">{valueDisplayType === 'variance' ? (unit === '%' ? 'pts' : unit) : unit}</span>
+                        <span className="node-value">
+                            {valueDisplayType === 'variance' && (currentVal - baselineVal) > 0 ? '+' : ''}
+                            {formatValue(valueDisplayType === 'variance' ? (currentVal - baselineVal) : currentVal)}
+                        </span>
                         <div className="node-trend-indicator" title="Annual variance vs Baseline">
                             {variance >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
                             {Math.abs(variance).toFixed(1)}%
@@ -278,30 +220,12 @@ const KPINode = ({ data }: NodeProps<KPINodeProps>) => {
                     </div>
                 )}
                 <div className="spacer" />
-                <button className="icon-btn-sm" onClick={() => onSettings(id)}><Settings size={12} /></button>
-                <button className="icon-btn-sm" onClick={() => onAddChild(id)}><Plus size={12} /></button>
-                <button className="icon-btn-sm danger" onClick={() => onResetKPI(id)}><RefreshCcw size={12} /></button>
+                <button className="icon-btn-sm" onClick={() => onSettings(id)} title="Node Settings"><Settings size={12} /></button>
+                <button className="icon-btn-sm" onClick={() => onAddChild(id)} title="Add Sub-KPI"><Plus size={12} /></button>
+                <button className="icon-btn-sm danger" onClick={() => onResetKPI(id)} title="Reset KPI Data"><RefreshCcw size={12} /></button>
             </div>
 
-            <div className="sparkline-mini">
-                <Sparkline
-                    values={isScenarioMode ? calculatedValue : baselineData}
-                    baseline={baselineData}
-                    labels={monthLabels}
-                    color={color}
-                    showScenario={isScenarioMode}
-                />
-            </div>
 
-            {/* Monthly Values Mini-Bar */}
-            <div className="node-monthly-bar">
-                {monthLabels.map((m, i) => (
-                    <div key={i} className="monthly-mini-cell" title={`${m}: ${(calculatedValue[i] ?? 0).toLocaleString()}`}>
-                        <span className="mini-month">{m[0]}</span>
-                        <span className="mini-val">{formatValue(calculatedValue[i] ?? 0)}</span>
-                    </div>
-                ))}
-            </div>
 
             <div className="node-expansion-toggle" onClick={(e) => { e.stopPropagation(); onToggleExpand(id); }}>
                 {isExpanded ? <ChevronDown size={14} /> : <div style={{ transform: 'rotate(-90deg)' }}><ChevronDown size={14} /></div>}

@@ -371,11 +371,11 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                 <table className="sheet-table" style={{ borderCollapse: 'separate', borderSpacing: 0, userSelect: isDragging ? 'none' : undefined }}>
                     <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8fafc' }}>
                         <tr>
-                            <th className="kpi-name-cell" style={{ position: 'sticky', left: 0, zIndex: 20, background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>KPI Name</th>
-                            <th style={{ position: 'sticky', left: '250px', zIndex: 20, background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}>Unit</th>
-                            <th style={{ position: 'sticky', left: '290px', zIndex: 20, background: '#f8fafc', borderBottom: '2px solid #cbd5e1' }}><Lock size={14} /></th>
-                            {months.map(m => <th key={m} style={{ borderBottom: '2px solid #cbd5e1' }}>{m}</th>)}
-                            <th className="total-head" style={{ borderBottom: '2px solid #cbd5e1' }}>Full Year</th>
+                            <th className="kpi-name-cell">KPI Name</th>
+                            <th className="unit-column">Unit</th>
+                            <th className="lock-column"><Lock size={14} /></th>
+                            {months.map(m => <th key={m} className="month-column" style={{ borderBottom: '2px solid #cbd5e1' }}>{m}</th>)}
+                            <th className="total-head month-column" style={{ borderBottom: '2px solid #cbd5e1' }}>Full Year</th>
                             {onDateRangeChange && (
                                 <th style={{ borderBottom: '2px solid #cbd5e1', width: '40px', padding: 0 }}>
                                     <button
@@ -396,7 +396,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
 
                             return (
                                 <tr key={kpi.id} className={kpi.children.length > 0 ? 'parent-row' : 'leaf-row'}>
-                                    <td className="kpi-name-cell" style={{ position: 'sticky', left: 0, background: 'white', zIndex: 2, borderRight: '1px solid #cbd5e1' }}>
+                                    <td className="kpi-name-cell">
                                         <div className="label-wrapper" style={{ paddingLeft: `${depth * 24}px` }}>
                                             {kpi.children.length > 0 && (
                                                 <span
@@ -412,8 +412,8 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                                             </span>
                                         </div>
                                     </td>
-                                    <td style={{ position: 'sticky', left: '250px', background: 'white', zIndex: 2, borderRight: '1px solid #cbd5e1', borderLeft: '1px solid #cbd5e1' }}><span className="unit-badge">{kpi.unit}</span></td>
-                                    <td style={{ position: 'sticky', left: '290px', background: 'white', zIndex: 2, borderRight: '2px solid #cbd5e1', textAlign: 'center' }}>
+                                    <td className="unit-column"><span className="unit-badge">{kpi.unit}</span></td>
+                                    <td className="lock-column">
                                         <button className="icon-btn-sm" onClick={() => onRowLockToggle?.(kpi.id)} style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 4 }}>
                                             {kpi.isLocked ? <Lock size={14} className="text-red-500" /> : <Unlock size={14} className="text-slate-400" />}
                                         </button>
@@ -429,7 +429,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                                         return (
                                             <td
                                                 key={idx}
-                                                className={`${override != null ? 'has-override' : ''} ${inDrag ? 'drag-selected' : ''}`}
+                                                className={`month-column ${override != null ? 'has-override' : ''} ${inDrag ? 'drag-selected' : ''}`}
                                                 onMouseEnter={() => handleCellMouseEnter(kpi.id, idx)}
                                                 style={{ position: 'relative' }}
                                             >
@@ -456,7 +456,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                                     })}
 
                                     {/* Full Year cell */}
-                                    <td className={`total-cell ${kpi.fullYearOverride != null ? 'has-override' : ''}`}>
+                                    <td className={`total-cell month-column ${kpi.fullYearOverride != null ? 'has-override' : ''}`}>
                                         <input
                                             className="sheet-cell-input total-input"
                                             value={isEditing('total') ? editText : getFullYearDisplayValue(kpi.id)}

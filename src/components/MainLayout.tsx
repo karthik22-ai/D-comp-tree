@@ -10,9 +10,13 @@ interface MainLayoutProps {
     onDateRangeChange: (range: DateRange) => void;
     onUploadData: (file: File) => void;
     onBack?: () => void;
+    isSyncEnabled?: boolean;
+    onSyncToggle?: () => void;
+    valueDisplayType?: 'absolute' | 'variance';
+    onValueDisplayTypeChange?: (type: 'absolute' | 'variance') => void;
 }
 
-const MainLayout: React.FC<MainLayoutProps> = ({ children, onReset, onForecast, dateRange, onDateRangeChange, onUploadData, onBack }) => {
+const MainLayout: React.FC<MainLayoutProps> = ({ children, onReset, onForecast, dateRange, onDateRangeChange, onUploadData, onBack, isSyncEnabled, onSyncToggle, valueDisplayType, onValueDisplayTypeChange }) => {
     return (
         <div className="main-layout">
             <Header
@@ -22,6 +26,10 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children, onReset, onForecast, 
                 onDateRangeChange={onDateRangeChange}
                 onUploadData={onUploadData}
                 onBack={onBack}
+                isSyncEnabled={isSyncEnabled}
+                onSyncToggle={onSyncToggle}
+                valueDisplayType={valueDisplayType || 'absolute'}
+                onValueDisplayTypeChange={onValueDisplayTypeChange || (() => { })}
             />
             <main className="main-content">
                 {children}
