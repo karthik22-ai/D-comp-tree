@@ -236,7 +236,7 @@ body {
 /* --- Header Styling --- */
 .app-header {
   height: var(--header-height);
-  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  background: #0D1846;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;

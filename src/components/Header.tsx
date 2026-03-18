@@ -98,7 +98,7 @@ const Header: React.FC<HeaderProps> = ({
                                 onClick={() => onDateRangeModeChange('MTD')}
                                 style={{
                                     padding: '2px 8px', fontSize: '11px', borderRadius: '3px', border: 'none', cursor: 'pointer',
-                                    background: dateRangeMode === 'MTD' ? '#3b82f6' : 'transparent',
+                                    background: dateRangeMode === 'MTD' ? '#0D1846' : 'transparent',
                                     color: dateRangeMode === 'MTD' ? 'white' : '#64748b',
                                     fontWeight: dateRangeMode === 'MTD' ? 600 : 400
                                 }}
@@ -109,7 +109,7 @@ const Header: React.FC<HeaderProps> = ({
                                 onClick={() => onDateRangeModeChange('YTD')}
                                 style={{
                                     padding: '2px 8px', fontSize: '11px', borderRadius: '3px', border: 'none', cursor: 'pointer',
-                                    background: dateRangeMode === 'YTD' ? '#3b82f6' : 'transparent',
+                                    background: dateRangeMode === 'YTD' ? '#0D1846' : 'transparent',
                                     color: dateRangeMode === 'YTD' ? 'white' : '#64748b',
                                     fontWeight: dateRangeMode === 'YTD' ? 600 : 400
                                 }}
