@@ -13,7 +13,7 @@ import ReactFlow, {
 import type { Edge, Node } from 'reactflow';
 import { Routes, Route, useNavigate } from 'react-router-dom';
 import 'reactflow/dist/style.css';
-import { Plus, X, Trash2, Layers, TrendingUp, ChevronDown, Search, Check } from 'lucide-react';
+import { Plus, X, Trash2, Layers, TrendingUp, ChevronDown, Search } from 'lucide-react';
 import { initialKPIs } from '../data';
 import { WelcomeScreen } from './WelcomeScreen';
 import { RawDataView } from './RawDataView';
@@ -412,8 +412,7 @@ const SimulationCanvasInner = ({
                                                                     }}
                                                                     style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px', cursor: 'pointer', fontSize: 12, borderRadius: 3, backgroundColor: isSelected ? '#f8fafc' : 'transparent' }}
                                                                 >
-                                                                    <div style={{ width: 12, height: 12, borderRadius: 2, border: isSelected ? '1px solid #3b82f6' : '1px solid #cbd5e1', background: isSelected ? '#3b82f6' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                                        {isSelected && <Check size={8} color="white" />}
+                                                                    <div style={{ width: 12, height: 12, borderRadius: '50%', border: isSelected ? '3.5px solid #3b82f6' : '1px solid #cbd5e1', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                                     </div>
                                                                     <span style={{ color: isSelected ? '#3b82f6' : '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
                                                                 </div>

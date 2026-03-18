@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import type { KPIData, Scenario, DateRange } from '../types';
-import { Save, Layers, Database, Calculator, Download, Upload, Lock, Unlock, Plus, Search, Check, ChevronDown } from 'lucide-react';
+import { Save, Layers, Database, Calculator, Download, Upload, Lock, Unlock, Plus, Search, ChevronDown } from 'lucide-react';
 import { getMonthsInRange } from '../utils/dateRange';
 import { apiService } from '../services/api';
 import * as XLSX from 'xlsx';
@@ -198,7 +198,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                 return child && !child.isScenarioNode;
             });
             const isLogicalLeaf = !hasVisibleChildren;
-            const hasScenariosToInject = selectedScenarioIds.length > 0;
+            const hasScenariosToInject = selectedScenarioIds.length > 1;
 
             ordered.push({ kpi: node, depth, isLogicalLeaf, hasScenariosToInject });
             
@@ -263,7 +263,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
         }
         
         // Parent node logic
-        if (!isLogicalLeaf && selectedScenarioIds.length > 0) {
+        if (!isLogicalLeaf && selectedScenarioIds.length > 1) {
             // Aggregate the calculated values across all selected scenarios to get the parent value
             let sum = 0;
             selectedScenarioIds.forEach(id => {
@@ -301,7 +301,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
             return fmt(kpi.fullYearOverride);
         }
 
-        if (!isLogicalLeaf(kpi) && selectedScenarioIds.length > 0) {
+        if (!isLogicalLeaf(kpi) && selectedScenarioIds.length > 1) {
             // Aggregate full year calculated values across all selected scenarios
             let sum = 0;
             selectedScenarioIds.forEach(id => {
@@ -741,8 +741,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                                                             }}
                                                             style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 4px', cursor: 'pointer', fontSize: 13 }}
                                                         >
-                                                            <div style={{ width: 14, height: 14, borderRadius: 3, border: isSelected ? '1px solid #1D4ED8' : '1px solid #D0D5DD', background: isSelected ? '#1D4ED8' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                                {isSelected && <Check size={10} color="white" />}
+                                                            <div style={{ width: 14, height: 14, borderRadius: '50%', border: isSelected ? '4px solid #1D4ED8' : '1px solid #D0D5DD', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                             </div>
                                                             <span style={{ color: isSelected ? '#1D4ED8' : '#344054', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
                                                         </div>
