@@ -1,4 +1,7 @@
 export type FormulaType = 'SUM' | 'PRODUCT' | 'NONE' | 'AVERAGE' | 'CUSTOM';
+export type ForecastMethod = 'LINEAR_TREND' | 'MOVING_AVERAGE' | 'FLAT_GROWTH' | 'SEASONAL_NAIVE';
+
+
 
 export interface TimeSeriesValue {
   month: string;
@@ -33,6 +36,8 @@ export interface KPIData {
   fullYearOverride?: number; // Total year override
   isLocked?: boolean; // If true, inputs are disabled
   lockedMonths?: boolean[]; // Array matching months data, true if cell is locked
+  pageId?: string; // ID of the page this KPI belongs to
+  isScenarioNode?: boolean; // True if this node represents a scenario split
 }
 
 export interface Scenario {
@@ -47,6 +52,11 @@ export interface Project {
   name: string;
   lastAccessed: string;
   createdAt: string;
+}
+
+export interface Page {
+  id: string;
+  name: string;
 }
 
 export interface DateRange {
@@ -70,11 +80,21 @@ export interface LogEntry {
 export interface AppState {
   scenarios: Record<string, Scenario>;
   activeScenarioId: string;
+  baselineScenarioId: string; // Scenario to compare against
+  spreadsheetSelectedScenarios?: string[];
   dateRange: DateRange;
   activityLog: LogEntry[];
   lockMonthIdx?: number;
   isSyncEnabled: boolean;
   valueDisplayType?: 'absolute' | 'variance';
+  pages?: Page[];
+  activePageId?: string;
+  baseScenarioLocked?: boolean;
+  rawImportData?: any[][];
+  sheets?: Record<string, any[][]>;
+  columnMappings?: Record<string, string>;
+  showCharts?: boolean;
+  dateRangeMode?: 'MTD' | 'YTD';
 }
 
 export interface SimulationState {

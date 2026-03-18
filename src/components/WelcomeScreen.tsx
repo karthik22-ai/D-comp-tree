@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
 import { Upload, Database, FolderDown } from 'lucide-react';
-import { parseFileToKPIs } from '../utils/fileImport';
 import type { KPIData } from '../types';
+import { apiService } from '../services/api';
+
 
 interface WelcomeScreenProps {
     onImportData: (kpis: Record<string, KPIData>) => void;
@@ -16,10 +17,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onImportData, onLo
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Note: isCalculating state is managed in SimulationCanvas, but we can call onImportData with empty when starting
+        // Actually, WelcomeScreen doesn't have isCalculating prop. 
+        // We'll rely on the parent's handleCustomDataImport to set it, but for immediate feedback:
         try {
-            const newKpis = await parseFileToKPIs(file, monthsCount);
-            if (Object.keys(newKpis).length > 0) {
-                onImportData(newKpis);
+            const response = await apiService.importFile(file, monthsCount);
+            if (response.kpis && Object.keys(response.kpis).length > 0) {
+                onImportData(response.kpis);
             }
         } catch (err) {
             console.error(err);

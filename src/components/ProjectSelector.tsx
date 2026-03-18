@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Database, FileSpreadsheet, FolderOpen, ArrowRight, Trash2 } from 'lucide-react';
+import { apiService } from '../services/api';
 import type { Project } from '../types';
 
 interface ProjectSelectorProps {
@@ -11,55 +12,52 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onSelectProjec
     const [newProjectName, setNewProjectName] = useState('');
     const [isCreating, setIsCreating] = useState(false);
 
-    useEffect(() => {
-        const saved = localStorage.getItem('forecasting-projects-list');
-        if (saved) {
-            try {
-                setProjects(JSON.parse(saved));
-            } catch (e) {
-                console.error('Failed to load projects');
-            }
+    const fetchProjects = async () => {
+        try {
+            const data = await apiService.getProjects();
+            setProjects(data);
+        } catch (e) {
+            console.error('Failed to load projects', e);
         }
-    }, []);
-
-    const saveProjects = (newProjects: Project[]) => {
-        setProjects(newProjects);
-        localStorage.setItem('forecasting-projects-list', JSON.stringify(newProjects));
     };
 
-    const handleCreateBlank = () => {
+    useEffect(() => { fetchProjects(); }, []);
+
+    const handleCreateBlank = async () => {
         if (!newProjectName.trim()) return;
-        const newProject: Project = {
-            id: `proj-${Date.now()}`,
-            name: newProjectName.trim(),
-            createdAt: new Date().toISOString(),
-            lastAccessed: new Date().toISOString()
-        };
-        saveProjects([...projects, newProject]);
-        onSelectProject(newProject.id, false);
+        try {
+            const id = `proj-${Date.now()}`;
+            await apiService.createProject(id, newProjectName.trim());
+            onSelectProject(id, false);
+        } catch (e) {
+            alert('Failed to create project');
+        }
     };
 
-    const handleCreateSample = () => {
-        const newProject: Project = {
-            id: `proj-${Date.now()}`,
-            name: `Sample Project ${projects.length + 1}`,
-            createdAt: new Date().toISOString(),
-            lastAccessed: new Date().toISOString()
-        };
-        saveProjects([...projects, newProject]);
-        onSelectProject(newProject.id, true);
+    const handleCreateSample = async () => {
+        try {
+            const id = `proj-${Date.now()}`;
+            await apiService.createProject(id, `Sample Project ${projects.length + 1}`);
+            onSelectProject(id, true);
+        } catch (e) {
+            alert('Failed to load sample');
+        }
     };
 
-    const handleDelete = (id: string, e: React.MouseEvent) => {
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (window.confirm('Are you sure you want to delete this project?')) {
-            saveProjects(projects.filter(p => p.id !== id));
-            localStorage.removeItem(`forecasting-app-state-v2-${id}`);
+            try {
+                await apiService.deleteProject(id);
+                fetchProjects();
+            } catch (e) {
+                alert('Failed to delete project');
+            }
         }
     };
 
     return (
-        <div style={{ minHeight: '100vh', background: '#f8fafc', padding: '40px 20px', fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ height: '100vh', overflowY: 'auto', background: '#f8fafc', padding: '40px 20px', fontFamily: 'system-ui, sans-serif' }}>
             <div style={{ maxWidth: 1000, margin: '0 auto' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 40 }}>
                     <Database size={32} style={{ color: '#3b82f6' }} />
@@ -156,8 +154,6 @@ export const ProjectSelector: React.FC<ProjectSelectorProps> = ({ onSelectProjec
                             <div
                                 key={project.id}
                                 onClick={() => {
-                                    const updated = projects.map(p => p.id === project.id ? { ...p, lastAccessed: new Date().toISOString() } : p);
-                                    saveProjects(updated);
                                     onSelectProject(project.id, false);
                                 }}
                                 style={{

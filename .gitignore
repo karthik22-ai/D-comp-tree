@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+Backend/.venv/
+.env
+
+
+# Local Netlify folder
+.netlify
